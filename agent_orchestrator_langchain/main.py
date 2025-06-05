@@ -11,7 +11,6 @@ from .tools import A2AKnowledgeTool, ORCHESTRATOR_AGENT_NAME
 load_dotenv()
 
 def run_orchestrator():
-    # Убедитесь, что OPENAI_API_KEY установлен
     if not os.getenv("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY not found in .env file or environment variables.")
         return
@@ -20,8 +19,6 @@ def run_orchestrator():
 
     tools = [A2AKnowledgeTool()]
 
-    # Обновленный промпт для лучшего понимания агентом, когда использовать инструмент
-    # Можно его улучшать, добавляя конкретные примеры
     prompt_template = ChatPromptTemplate.from_messages([
         ("system", f"You are a helpful assistant named {ORCHESTRATOR_AGENT_NAME}. "
                    "You have access to a specialized KnowledgeAgent. "
@@ -60,7 +57,6 @@ def run_orchestrator():
 
         except Exception as e:
             print(f"Error during agent execution: {e}")
-            # Можно добавить логику повтора или отката
             chat_history.append(HumanMessage(content=user_input))
             chat_history.append(AIMessage(content=f"Sorry, I encountered an error: {e}"))
 

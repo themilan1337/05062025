@@ -6,10 +6,9 @@ from typing import Type, Dict, Any
 
 from a2a_protocol import A2AMessage, AgentContext, AgentRole, ToolCall, ConversationTurn
 
-# Имена агентов должны быть консистентны
 ORCHESTRATOR_AGENT_NAME = "OrchestratorAgentLangchain"
-KNOWLEDGE_AGENT_NAME = "KnowledgeAgentLlama" # Должно совпадать с тем, что в KnowledgeAgent
-KNOWLEDGE_AGENT_URL = "http://localhost:8001/a2a_exchange" # URL нашего KnowledgeAgent
+KNOWLEDGE_AGENT_NAME = "KnowledgeAgentLlama"
+KNOWLEDGE_AGENT_URL = "http://localhost:8001/a2a_exchange"
 
 class KnowledgeBaseQueryInput(BaseModel):
     query: str = Field(description="The query to send to the knowledge base agent.")
@@ -30,11 +29,10 @@ class A2AKnowledgeTool(BaseTool):
             for turn in a2a_response.turns:
                 if turn.tool_responses:
                     for tool_resp in turn.tool_responses:
-                        if tool_resp.tool_name == "query_knowledge_base": # Ожидаемое имя от KnowledgeAgent
+                        if tool_resp.tool_name == "query_knowledge_base":
                             if not tool_resp.is_error:
-                                # Предполагаем, что ответ в tool_output.answer
                                 answer = tool_resp.tool_output.get("answer", "No answer found.")
-                                results.append(str(answer)) # Убедимся, что это строка
+                                results.append(str(answer))
                             else:
                                 error_msg = tool_resp.tool_output.get("error", "Unknown error from tool.")
                                 results.append(f"Error from KnowledgeAgent: {error_msg}")
@@ -44,15 +42,13 @@ class A2AKnowledgeTool(BaseTool):
             return f"Error parsing response from KnowledgeAgent: {str(e)}"
 
     def _run(self, query: str) -> str:
-        """Используется Langchain для выполнения инструмента."""
         print(f"\n[{ORCHESTRATOR_AGENT_NAME}] Using A2AKnowledgeTool with query: {query}")
 
-        # 1. Создаем A2A сообщение
         orchestrator_context = AgentContext(agent_name=ORCHESTRATOR_AGENT_NAME, role=AgentRole.ASSISTANT)
-        knowledge_agent_context = AgentContext(agent_name=KNOWLEDGE_AGENT_NAME, role=AgentRole.TOOL) # или ASSISTANT
+        knowledge_agent_context = AgentContext(agent_name=KNOWLEDGE_AGENT_NAME, role=AgentRole.TOOL)
 
         tool_call = ToolCall(
-            tool_name="query_knowledge_base", # Это имя инструмента, которое ожидает KnowledgeAgent
+            tool_name="query_knowledge_base",
             tool_input={"query": query}
         )
 
@@ -64,22 +60,20 @@ class A2AKnowledgeTool(BaseTool):
 
         message_to_knowledge_agent = A2AMessage(turns=[turn_to_knowledge_agent])
 
-        # 2. Отправляем HTTP POST запрос
         try:
             print(f"[{ORCHESTRATOR_AGENT_NAME}] Sending A2A message to {KNOWLEDGE_AGENT_URL}:")
             print(message_to_knowledge_agent.model_dump_json(indent=2))
 
             response = requests.post(
                 KNOWLEDGE_AGENT_URL,
-                json=message_to_knowledge_agent.model_dump() # Pydantic .model_dump() для сериализации
+                json=message_to_knowledge_agent.model_dump()
             )
-            response.raise_for_status() # Вызовет исключение для HTTP ошибок (4xx, 5xx)
+            response.raise_for_status()
             
             response_data = response.json()
             print(f"[{ORCHESTRATOR_AGENT_NAME}] Received A2A response from KnowledgeAgent:")
             print(json.dumps(response_data, indent=2))
 
-            # 3. Парсим ответ
             parsed_output = self._parse_a2a_response(response_data)
             return parsed_output
 
@@ -91,6 +85,4 @@ class A2AKnowledgeTool(BaseTool):
             return f"Unexpected error during A2A exchange: {e}"
 
     async def _arun(self, query: str) -> str:
-        # Для асинхронного выполнения, если потребуется. Пока не реализуем.
-        # Можно использовать aiohttp для асинхронных запросов.
         raise NotImplementedError("A2AKnowledgeTool does not support async operation yet.")
