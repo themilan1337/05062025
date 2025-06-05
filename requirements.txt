@@ -1,0 +1,10 @@
+langchain
+langchain-openai
+llama-index
+llama-index-llms-openai
+llama-index-embeddings-openai
+fastapi
+uvicorn
+pydantic
+python-dotenv
+requests
